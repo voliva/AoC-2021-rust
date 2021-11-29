@@ -2,7 +2,6 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::BufReader;
 
-#[macro_use]
 macro_rules! printResult {
     ($part:expr, $result:expr ) => {
         match $result {
