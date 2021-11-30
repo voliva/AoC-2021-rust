@@ -46,13 +46,18 @@ async fn download(selected_day: isize) -> Result<(), Box<dyn std::error::Error>>
 
     let body = client
         .get(format!(
-            "https://adventofcode.com/2020/day/{}/input",
+            "https://adventofcode.com/2021/day/{}/input",
             selected_day
         ))
         .send()
         .await?
         .text()
         .await?;
+
+    if body.contains("Please don't repeatedly request this endpoint") {
+        println!("Day {:02} not yet ready", selected_day);
+        return Ok(());
+    }
 
     std::fs::write(format!("inputs/{:02}", selected_day), body)?;
 
@@ -86,8 +91,6 @@ fn append_day(selected_day: isize) -> Result<(), std::io::Error> {
         "_ => panic!",
         &format!("{}\n        _ => panic!", new_match),
     );
-
-    println!("{}", contents);
 
     return std::fs::write("src/solutions/mod.rs", contents);
 }
