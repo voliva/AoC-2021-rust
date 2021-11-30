@@ -20,7 +20,7 @@ pub trait Solver {
     fn solve_first(&self, input: &Self::Input) -> Result<Self::Output1, String>;
     fn solve_second(&self, input: &Self::Input) -> Result<Self::Output2, String>;
 
-    fn solve(&self, filename: String, parts: u8) {
+    fn solve(&self, filename: String, parts: isize) {
         let file = File::open(filename).expect("input file not found");
         let input = self.read_input(BufReader::new(&file));
         if parts & 0x1 > 0 {

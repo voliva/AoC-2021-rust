@@ -4,8 +4,12 @@ use std::io::{BufRead, BufReader};
 
 pub struct Problem;
 
-impl Solver<InputType, Output1Type, Output2Type> for Problem {
-    fn read_input(&self, file_reader: BufReader<&File>) -> InputType {
+impl Solver for Problem {
+    type Input = Vec<isize>;
+    type Output1 = isize;
+    type Output2 = isize;
+
+    fn read_input(&self, file_reader: BufReader<&File>) -> Self::Input {
         file_reader
             .lines()
             .filter_map(|x| x.ok())
@@ -13,10 +17,12 @@ impl Solver<InputType, Output1Type, Output2Type> for Problem {
             .filter_map(|x| x.ok())
             .collect()
     }
-    fn solve_first(&self, _input: &InputType) -> Result<Output1Type, String> {
+
+    fn solve_first(&self, input: &Vec<isize>) -> Result<Self::Output1, String> {
         todo!()
     }
-    fn solve_second(&self, _input: &InputType) -> Result<Output2Type, String> {
+
+    fn solve_second(&self, input: &Vec<isize>) -> Result<isize, String> {
         todo!()
     }
 }

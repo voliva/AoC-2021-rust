@@ -1,51 +1,36 @@
 use chrono::Datelike;
 use clap::{App, Arg, SubCommand};
+use std::io::Read;
 
-//mod solutions;
+mod solutions;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
 
     let matches = App::new("Advent of Code 2021 Solutions")
+        .arg(Arg::with_name("part"))
+        .arg(
+            Arg::with_name("day")
+                .short("d")
+                .long("day")
+                .takes_value(true),
+        )
         .subcommand(SubCommand::with_name("download").arg(Arg::with_name("day")))
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("download") {
-        download(matches.value_of("day")).await?;
+        return download(get_day(matches.value_of("day"))).await;
     }
 
-    Ok(())
+    let part: isize = matches.value_of("part").unwrap_or("3").parse()?;
+    let day = get_day(matches.value_of("day"));
+    solutions::solve(day, part);
 
-    // let args: Vec<String> = env::args().collect();
-    // if args.len() < 2 {
-    //     panic!("Need to specify day")
-    // }
-    // let day: u8 = args[1].parse().unwrap();
-    // let parts: u8 = if args.len() > 2 {
-    //     args[2].parse().unwrap()
-    // } else {
-    //     3
-    // };
-    // solutions::solve(day, parts);
+    Ok(())
 }
 
-// fn flatMapInner(x: String) -> Vec<String> {
-//     return x.split(',').map(|x| String::from(x)).collect();
-// }
-
-// .flat_map(|x| {
-//     //x.split(',')
-//     x.chars().map(|x| String::from(x)).collect::<Vec<String>>()
-// })
-// for token in res {
-//     println!("token: {} ({})", token, token.len());
-// }
-
-async fn download(day: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
-    let default_day = chrono::Utc::now().day().to_string();
-    let selected_day = day.unwrap_or(&default_day);
-
+async fn download(selected_day: isize) -> Result<(), Box<dyn std::error::Error>> {
     let mut headers = reqwest::header::HeaderMap::new();
 
     let token = std::env::var("TOKEN");
@@ -69,7 +54,45 @@ async fn download(day: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
         .text()
         .await?;
 
-    std::fs::write(format!("inputs/{}", selected_day), body)?;
+    std::fs::write(format!("inputs/{:02}", selected_day), body)?;
+
+    copy_template(selected_day)?;
+
+    append_day(selected_day)?;
 
     Ok(())
+}
+
+fn copy_template(selected_day: isize) -> Result<u64, std::io::Error> {
+    return std::fs::copy(
+        "src/solutions/template.rs",
+        format!("src/solutions/day{:02}.rs", selected_day),
+    );
+}
+
+fn append_day(selected_day: isize) -> Result<(), std::io::Error> {
+    let mut file = std::fs::File::open("src/solutions/mod.rs")?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    let new_mod = format!("mod day{:02};", selected_day);
+    contents = contents.replace("mod solver;", &format!("{}\nmod solver;", new_mod));
+
+    let new_match = format!(
+        "{} => day{:02}::Problem.solve(filename, parts),",
+        selected_day, selected_day
+    );
+    contents = contents.replace(
+        "_ => panic!",
+        &format!("{}\n        _ => panic!", new_match),
+    );
+
+    println!("{}", contents);
+
+    return std::fs::write("src/solutions/mod.rs", contents);
+}
+
+fn get_day(day: Option<&str>) -> isize {
+    let default_day = chrono::Utc::now().day().to_string();
+    day.unwrap_or(&default_day).parse().unwrap()
 }
