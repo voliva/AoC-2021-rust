@@ -41,8 +41,7 @@ impl Solver for Problem {
     fn solve_second(&self, input: &Vec<isize>) -> Result<isize, String> {
         let sums = input
             .into_iter()
-            .map(|v| (0, 0, v))
-            .scan((0, 0, 0), |state, (_, _, v)| {
+            .scan((0, 0, 0), |state, v| {
                 let (_, v2, v1) = *state;
                 *state = (v2, v1, *v);
 
@@ -50,22 +49,7 @@ impl Solver for Problem {
             })
             .skip(2);
 
-        let result = sums
-            .map(|v| (0, v))
-            .reduce(
-                |(t, prev), (_, new)| {
-                    if new > prev {
-                        (t + 1, new)
-                    } else {
-                        (t, new)
-                    }
-                },
-            )
-            .unwrap();
-
-        let (total, _) = result;
-
-        Ok(total)
+        self.solve_first(&sums.collect())
         // Not 1653
     }
 }
