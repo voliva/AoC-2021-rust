@@ -14,15 +14,14 @@ impl Solver for Problem {
             .lines()
             .filter_map(|x| x.ok())
             .map(|line| {
-                let parts = line.split(" ").collect::<Vec<&str>>();
+                let parts = line.split_whitespace().collect::<Vec<&str>>();
 
                 let direction = parts[0];
-                let quantity = parts[1].parse::<isize>().unwrap();
+                let quantity = parts[1].parse().unwrap();
 
-                // .to_owned() vs clone()?
-                (direction.to_owned(), quantity)
+                (direction.to_string(), quantity)
             })
-            .map(|(direction, quantity)| match &direction[..] {
+            .map(|(direction, quantity)| match direction.as_str() {
                 "forward" => (quantity, 0),
                 "down" => (0, quantity),
                 "up" => (0, -quantity),
