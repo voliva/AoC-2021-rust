@@ -18,11 +18,11 @@ impl Solver for Problem {
             .collect()
     }
 
-    fn solve_first(&self, input: &Vec<isize>) -> Result<Self::Output1, String> {
+    fn solve_first(&self, input: &Input) -> Result<Self::Output1, String> {
         todo!()
     }
 
-    fn solve_second(&self, input: &Vec<isize>) -> Result<isize, String> {
+    fn solve_second(&self, input: &Input) -> Result<Self::Output2, String> {
         todo!()
     }
 }
