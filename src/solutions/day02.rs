@@ -30,17 +30,17 @@ impl Solver for Problem {
             .collect()
     }
 
-    fn solve_first(&self, input: &Self::Input) -> Result<Self::Output1, String> {
+    fn solve_first(&self, input: &mut Self::Input) -> Result<Self::Output1, String> {
         let (horizontal, depth) = input
             .into_iter()
-            .fold((0, 0), |(h0, d0), (h, d)| (h0 + h, d0 + d));
+            .fold((0, 0), |(h0, d0), (h, d)| (h0 + *h, d0 + *d));
 
         Ok(horizontal * depth)
     }
 
-    fn solve_second(&self, input: &Self::Input) -> Result<isize, String> {
+    fn solve_second(&self, input: &mut Self::Input) -> Result<isize, String> {
         let (horizontal, depth, _) = input.into_iter().fold((0, 0, 0), |(h0, d0, a0), (h, a)| {
-            (h0 + h, d0 + (a0 * h), a0 + a)
+            (h0 + *h, d0 + (a0 * *h), a0 + *a)
         });
 
         Ok(horizontal * depth)

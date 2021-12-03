@@ -18,7 +18,7 @@ impl Solver for Problem {
             .collect()
     }
 
-    fn solve_first(&self, input: &Vec<isize>) -> Result<Self::Output1, String> {
+    fn solve_first(&self, input: &mut Vec<isize>) -> Result<Self::Output1, String> {
         let result = input
             .into_iter()
             .map(|v| (0, v))
@@ -38,7 +38,7 @@ impl Solver for Problem {
         Ok(total)
     }
 
-    fn solve_second(&self, input: &Vec<isize>) -> Result<isize, String> {
+    fn solve_second(&self, input: &mut Vec<isize>) -> Result<isize, String> {
         let sums = input
             .into_iter()
             .scan((0, 0, 0), |state, v| {
@@ -49,7 +49,7 @@ impl Solver for Problem {
             })
             .skip(2);
 
-        self.solve_first(&sums.collect())
+        self.solve_first(&mut sums.collect())
         // Not 1653
     }
 }

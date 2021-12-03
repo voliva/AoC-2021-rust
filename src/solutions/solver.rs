@@ -23,19 +23,19 @@ pub trait Solver {
     type Output2: Display;
 
     fn read_input(&self, file_reader: BufReader<&File>) -> Self::Input;
-    fn solve_first(&self, input: &Self::Input) -> Result<Self::Output1, String>;
-    fn solve_second(&self, input: &Self::Input) -> Result<Self::Output2, String>;
+    fn solve_first(&self, input: &mut Self::Input) -> Result<Self::Output1, String>;
+    fn solve_second(&self, input: &mut Self::Input) -> Result<Self::Output2, String>;
 
     fn solve(&self, filename: String, parts: isize) {
         let file = File::open(filename).expect("input file not found");
         let mut input = self.read_input(BufReader::new(&file));
         if parts & 0x1 > 0 {
             let start = Instant::now();
-            printResult!(1, self.solve_first(&input), start);
+            printResult!(1, self.solve_first(&mut input), start);
         }
         if parts & 0x2 > 0 {
             let start = Instant::now();
-            printResult!(2, self.solve_second(&input), start)
+            printResult!(2, self.solve_second(&mut input), start)
         }
     }
 }

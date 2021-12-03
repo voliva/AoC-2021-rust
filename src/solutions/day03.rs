@@ -27,18 +27,19 @@ impl Solver for Problem {
         )
     }
 
-    fn solve_first(&self, (bits, input): &Self::Input) -> Result<Self::Output1, String> {
+    fn solve_first(&self, (bits, input): &mut Self::Input) -> Result<Self::Output1, String> {
         let mut vec = vec![0; *bits];
+
+        let n = input.len();
 
         for n in input {
             for i in 0..*bits {
-                if n & (0x01 << i) > 0 {
+                if *n & (0x01 << i) > 0 {
                     vec[i] = vec[i] + 1
                 }
             }
         }
 
-        let n = input.len();
         let mut epsilon = 0;
         let mut gamma = 0;
         for i in 0..*bits {
@@ -53,21 +54,19 @@ impl Solver for Problem {
         Ok(epsilon * gamma)
     }
 
-    fn solve_second(&self, (bits, input): &Self::Input) -> Result<Self::Output2, String> {
-        let mut clone = input.clone();
-
-        let main_split = partition(&mut clone.iter_mut(), |x| x & (0x01 << (bits - 1)) >= 1);
-        let next_bits = (bits - 2).try_into().unwrap();
+    fn solve_second(&self, (bits, input): &mut Self::Input) -> Result<Self::Output2, String> {
+        let main_split = partition(&mut input.iter_mut(), |x| x & (0x01 << (*bits - 1)) >= 1);
+        let next_bits = (*bits - 2).try_into().unwrap();
 
         let (oxygen, co2) = if main_split > input.len() / 2 {
             (
-                calculate_oxygen(&mut clone[..main_split], next_bits),
-                calculate_co2(&mut clone[main_split..], next_bits),
+                calculate_oxygen(&mut input[..main_split], next_bits),
+                calculate_co2(&mut input[main_split..], next_bits),
             )
         } else {
             (
-                calculate_oxygen(&mut clone[main_split..], next_bits),
-                calculate_co2(&mut clone[..main_split], next_bits),
+                calculate_oxygen(&mut input[main_split..], next_bits),
+                calculate_co2(&mut input[..main_split], next_bits),
             )
         };
 
