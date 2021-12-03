@@ -1,11 +1,17 @@
 use std::fmt::Display;
 use std::fs::File;
 use std::io::BufReader;
+use std::time::Instant;
 
 macro_rules! printResult {
-    ($part:expr, $result:expr ) => {
+    ($part:expr, $result:expr, $start:expr ) => {
         match $result {
-            Ok(res) => println!("Solution to part {}: {}", $part, res),
+            Ok(res) => println!(
+                "Solution to part {}: {} ({})",
+                $part,
+                res,
+                get_elapsed($start)
+            ),
             Err(val) => println!("Solution to part {} errored: {}", $part, val),
         }
     };
@@ -24,10 +30,25 @@ pub trait Solver {
         let file = File::open(filename).expect("input file not found");
         let input = self.read_input(BufReader::new(&file));
         if parts & 0x1 > 0 {
-            printResult!(1, self.solve_first(&input))
+            let start = Instant::now();
+            printResult!(1, self.solve_first(&input), start);
         }
         if parts & 0x2 > 0 {
-            printResult!(2, self.solve_second(&input))
+            let start = Instant::now();
+            printResult!(2, self.solve_second(&input), start)
         }
+    }
+}
+
+fn get_elapsed(start: Instant) -> String {
+    let elapsed = start.elapsed();
+
+    let nanos = elapsed.as_nanos();
+    let decimals = format!("{}", nanos).len();
+    match decimals {
+        0..=3 => format!("{} ns", elapsed.as_nanos()),
+        4..=6 => format!("{} μs", elapsed.as_micros()),
+        7..=9 => format!("{} ms", elapsed.as_millis()),
+        _ => format!("{} s", elapsed.as_secs()),
     }
 }
