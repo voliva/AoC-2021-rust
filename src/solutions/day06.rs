@@ -45,21 +45,19 @@ impl Solver for Problem {
     }
 
     fn solve_second(&self, input: &Self::Input) -> Result<Self::Output2, String> {
-        let mut days = vec![0; 9];
+        const N: usize = 9;
+        let mut days = vec![0; N];
         input.into_iter().fold(&mut days, |acc, fish| {
             acc[*fish] += 1;
             acc
         });
 
+        let mut start: usize = 0;
         for _ in 0..256 {
-            let fish_to_add = days[0];
+            let fish_to_add = days[start];
+            start = (start + 1) % N;
 
-            for j in 1..9 {
-                days[j - 1] = days[j];
-            }
-
-            days[6] += fish_to_add;
-            days[8] = fish_to_add;
+            days[(start + 6) % N] += fish_to_add;
         }
 
         Ok(days.into_iter().reduce(|a, b| a + b).unwrap())
