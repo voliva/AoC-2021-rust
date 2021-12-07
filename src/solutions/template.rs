@@ -6,8 +6,8 @@ pub struct Problem;
 
 impl Solver for Problem {
     type Input = Vec<isize>;
-    type Output1 = isize;
-    type Output2 = isize;
+    type Output1 = usize;
+    type Output2 = usize;
 
     fn read_input(&self, file_reader: BufReader<&File>) -> Self::Input {
         file_reader
