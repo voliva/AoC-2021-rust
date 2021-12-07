@@ -1,4 +1,5 @@
 use super::Solver;
+use regex::Regex;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::str::FromStr;
@@ -13,9 +14,9 @@ impl Solver for Problem {
     fn read_input(&self, file_reader: BufReader<&File>) -> Self::Input {
         file_reader
             .lines()
-            .filter_map(|x| x.ok())
+            .map(|x| x.unwrap())
             .map(|line| line.parse())
-            .filter_map(|x| x.ok())
+            .map(|x| x.unwrap())
             .collect()
     }
 
@@ -68,18 +69,6 @@ struct Point {
     y: usize,
 }
 
-impl FromStr for Point {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(",");
-        Ok(Point {
-            x: split.next().unwrap().parse().unwrap(),
-            y: split.next().unwrap().parse().unwrap(),
-        })
-    }
-}
-
 #[derive(Debug)]
 pub struct Line {
     start: Point,
@@ -87,14 +76,26 @@ pub struct Line {
 }
 
 impl FromStr for Line {
-    type Err = &'static str;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(" -> ");
-        Ok(Line {
-            start: split.next().unwrap().parse().unwrap(),
-            end: split.next().unwrap().parse().unwrap(),
-        })
+        lazy_static::lazy_static! {
+            static ref LINE_RGX: Regex = Regex::new(r"(\d+),(\d+) -> (\d+),(\d+)").unwrap();
+        }
+
+        match LINE_RGX.captures(s) {
+            None => Err(format!("Error parsing line '{}'", s)),
+            Some(captures) => Ok(Line {
+                start: Point {
+                    x: captures[1].parse().unwrap(),
+                    y: captures[2].parse().unwrap(),
+                },
+                end: Point {
+                    x: captures[3].parse().unwrap(),
+                    y: captures[4].parse().unwrap(),
+                },
+            }),
+        }
     }
 }
 

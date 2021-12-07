@@ -12,9 +12,9 @@ impl Solver for Problem {
     fn read_input(&self, file_reader: BufReader<&File>) -> Self::Input {
         file_reader
             .lines()
-            .filter_map(|x| x.ok())
+            .map(|x| x.unwrap())
             .map(|line| line.parse())
-            .filter_map(|x| x.ok())
+            .map(|x| x.unwrap())
             .collect()
     }
 
