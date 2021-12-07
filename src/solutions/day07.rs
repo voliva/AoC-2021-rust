@@ -28,8 +28,8 @@ impl Solver for Problem {
 
         let max_position = input.iter().fold(0, |acc, x| acc.max(*x));
 
-        let range = (0..max_position + 1);
-        let fuel_cost = range.map(|p: usize| input.iter().fold(0, |acc, x| acc + calc_fuel(p, *x)));
+        let fuel_cost = (0..max_position + 1)
+            .map(|p: usize| input.iter().fold(0, |acc, x| acc + calc_fuel(p, *x)));
 
         Ok(fuel_cost.fold(usize::MAX, |acc, x| acc.min(x)))
     }
@@ -42,8 +42,8 @@ impl Solver for Problem {
 
         let max_position = input.iter().fold(0, |acc, x| acc.max(*x));
 
-        let range = (0..max_position + 1);
-        let fuel_cost = range.map(|p: usize| input.iter().fold(0, |acc, x| acc + calc_fuel(p, *x)));
+        let fuel_cost = (0..max_position + 1)
+            .map(|p: usize| input.iter().fold(0, |acc, x| acc + calc_fuel(p, *x)));
 
         Ok(fuel_cost.fold(usize::MAX, |acc, x| acc.min(x)))
     }
