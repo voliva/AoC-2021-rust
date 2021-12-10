@@ -50,65 +50,6 @@ impl Solver for Problem {
     }
 }
 
-fn corrupted_score(line: &str) -> Option<usize> {
-    let result = line
-        .chars()
-        .scan(Vec::new(), |acc, c| {
-            let result = match c {
-                '(' | '[' | '{' | '<' => {
-                    acc.push(c);
-                    None
-                }
-                ')' => {
-                    if let Some('(') = acc.last() {
-                        acc.pop();
-                        None
-                    } else {
-                        Some(c)
-                    }
-                }
-                ']' => {
-                    if let Some('[') = acc.last() {
-                        acc.pop();
-                        None
-                    } else {
-                        Some(c)
-                    }
-                }
-                '}' => {
-                    if let Some('{') = acc.last() {
-                        acc.pop();
-                        None
-                    } else {
-                        Some(c)
-                    }
-                }
-                '>' => {
-                    if let Some('<') = acc.last() {
-                        acc.pop();
-                        None
-                    } else {
-                        Some(c)
-                    }
-                }
-                _ => unreachable!(),
-            };
-            Some(result)
-        })
-        .filter_map(|v| v)
-        .take(1)
-        .collect_vec();
-
-    match result.get(0) {
-        Some(')') => Some(3),
-        Some(']') => Some(57),
-        Some('}') => Some(1197),
-        Some('>') => Some(25137),
-        Some(_) => unreachable!(),
-        None => None,
-    }
-}
-
 enum Status {
     Complete,
     Incomplete(Vec<char>),
@@ -168,5 +109,20 @@ fn check(line: &str) -> Status {
     } else {
         stack.reverse();
         Status::Incomplete(stack)
+    }
+}
+
+fn corrupted_score(line: &str) -> Option<usize> {
+    let result = check(line);
+
+    match result {
+        Status::Corrupt(c) => match c {
+            ')' => Some(3),
+            ']' => Some(57),
+            '}' => Some(1197),
+            '>' => Some(25137),
+            _ => unreachable!(),
+        },
+        _ => None,
     }
 }
