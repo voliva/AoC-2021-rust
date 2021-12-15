@@ -37,13 +37,14 @@ impl Solver for Problem {
         increment_map(&mut total_count_map, &polymer[0..1], 1);
         increment_map(&mut total_count_map, &polymer[polymer.len() - 1..], 1);
 
-        let sizes = total_count_map
+        let (min, max) = total_count_map
             .values()
             .map(|v| v / 2)
-            .sorted()
-            .collect_vec();
+            .minmax()
+            .into_option()
+            .unwrap();
 
-        Ok(sizes[sizes.len() - 1] - sizes[0])
+        Ok(max - min)
     }
 
     fn solve_second(&self, (polymer, rules): &Self::Input) -> Result<Self::Output2, String> {
@@ -57,13 +58,14 @@ impl Solver for Problem {
         increment_map(&mut total_count_map, &polymer[0..1], 1);
         increment_map(&mut total_count_map, &polymer[polymer.len() - 1..], 1);
 
-        let sizes = total_count_map
+        let (min, max) = total_count_map
             .values()
             .map(|v| v / 2)
-            .sorted()
-            .collect_vec();
+            .minmax()
+            .into_option()
+            .unwrap();
 
-        Ok(sizes[sizes.len() - 1] - sizes[0])
+        Ok(max - min)
     }
 }
 
@@ -71,18 +73,7 @@ fn polymer_to_map(polymer: &str) -> HashMap<String, usize> {
     let left = polymer.chars();
     let right = polymer.chars().skip(1);
 
-    let pairs = left
-        .zip(right)
-        .map(|(l, r)| format!("{}{}", l, r))
-        .collect_vec();
-
-    let mut result: HashMap<String, usize> = HashMap::new();
-
-    for p in pairs {
-        increment_map(&mut result, &p, 1);
-    }
-
-    result
+    left.zip(right).map(|(l, r)| format!("{}{}", l, r)).counts()
 }
 
 fn polymerize(

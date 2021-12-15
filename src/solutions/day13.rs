@@ -11,12 +11,12 @@ use std::str::FromStr;
 pub struct Problem;
 
 impl Solver for Problem {
-    type Input = (Vec<Coordinate>, Vec<Fold>);
+    type Input = (HashSet<Coordinate>, Vec<Fold>);
     type Output1 = usize;
     type Output2 = usize;
 
     fn read_input(&self, file_reader: BufReader<&File>) -> Self::Input {
-        let mut coordinates = Vec::new();
+        let mut coordinates = HashSet::new();
         let mut folds = Vec::new();
 
         let lines = file_reader.lines().map(|x| x.unwrap());
@@ -29,7 +29,7 @@ impl Solver for Problem {
             if line.starts_with("fold") {
                 folds.push(line.parse().unwrap());
             } else {
-                coordinates.push(line.parse().unwrap());
+                coordinates.insert(line.parse().unwrap());
             }
         }
 
@@ -37,24 +37,15 @@ impl Solver for Problem {
     }
 
     fn solve_first(&self, (coordinates, folds): &Self::Input) -> Result<Self::Output1, String> {
-        let first_fold = &folds[0];
-        let mut coordinate_set = HashSet::new();
-
-        for c in coordinates {
-            let folded = apply_fold(c, first_fold);
-            coordinate_set.insert(folded);
-        }
-
-        Ok(coordinate_set.len())
+        let result = folds
+            .into_iter()
+            .take(1)
+            .fold(coordinates.clone(), apply_fold);
+        Ok(result.len())
     }
 
     fn solve_second(&self, (coordinates, folds): &Self::Input) -> Result<Self::Output2, String> {
-        let mut coordinate_set = HashSet::new();
-
-        for c in coordinates {
-            let folded = apply_folds(c, &folds);
-            coordinate_set.insert(folded);
-        }
+        let coordinate_set = folds.into_iter().fold(coordinates.clone(), apply_fold);
 
         let max = coordinate_set
             .iter()
@@ -80,30 +71,21 @@ impl Solver for Problem {
     }
 }
 
-fn apply_folds(c: &Coordinate, folds: &Vec<Fold>) -> Coordinate {
-    let mut result = c.clone();
-
-    for f in folds {
-        result = apply_fold(&result, f);
-    }
-
-    result
-}
-
-fn apply_fold(c: &Coordinate, f: &Fold) -> Coordinate {
-    let mut result = c.clone();
-
-    match f {
-        Fold::X(v) if *v < c.x => {
-            result.x = v - (result.x - v);
-        }
-        Fold::Y(v) if *v < c.y => {
-            result.y = v - (result.y - v);
-        }
-        _ => {}
-    }
-
-    return result;
+fn apply_fold(coordinates: HashSet<Coordinate>, fold: &Fold) -> HashSet<Coordinate> {
+    coordinates
+        .into_iter()
+        .map(|c| match fold {
+            Fold::X(v) if *v < c.x => Coordinate {
+                x: v - (c.x - v),
+                y: c.y,
+            },
+            Fold::Y(v) if *v < c.y => Coordinate {
+                x: c.x,
+                y: v - (c.y - v),
+            },
+            _ => c,
+        })
+        .collect()
 }
 
 #[derive(Debug)]
