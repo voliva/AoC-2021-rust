@@ -46,9 +46,9 @@ fn get_elapsed(start: Instant) -> String {
     let nanos = elapsed.as_nanos();
     let decimals = format!("{}", nanos).len();
     match decimals {
-        0..=3 => format!("{} ns", elapsed.as_nanos()),
-        4..=6 => format!("{} μs", elapsed.as_micros()),
-        7..=9 => format!("{} ms", elapsed.as_millis()),
+        0..=4 => format!("{} ns", elapsed.as_nanos()),
+        5..=7 => format!("{} μs", elapsed.as_micros()),
+        8..=10 => format!("{} ms", elapsed.as_millis()),
         _ => format!("{} s", elapsed.as_secs()),
     }
 }
