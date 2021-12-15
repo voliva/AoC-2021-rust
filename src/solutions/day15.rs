@@ -74,44 +74,30 @@ fn adjacent(
     position: &(usize, usize, usize, usize),
     extend: usize,
 ) -> impl Iterator<Item = (usize, usize, usize, usize)> {
-    let (r, c, lx, ly) = position.to_owned();
+    let rows = shape[0];
+    let cols = shape[1];
+    let (r, c, lx, ly) = position;
+    let y = *ly * rows + *r;
+    let x = *lx * cols + *c;
+    let max_y = rows * extend;
+    let max_x = cols * extend;
 
-    let rs = match r {
-        0 => {
-            if ly == 0 {
-                vec![(r + 1, ly)]
-            } else {
-                vec![(r + 1, ly), (shape[0] - 1, ly - 1)]
-            }
-        }
-        v if v == shape[0] - 1 => {
-            if ly == extend - 1 {
-                vec![(v - 1, ly)]
-            } else {
-                vec![(v - 1, ly), (0, ly + 1)]
-            }
-        }
-        v => vec![(v - 1, ly), (v + 1, ly)],
-    };
-    let cs = match c {
-        0 => {
-            if lx == 0 {
-                vec![(c + 1, lx)]
-            } else {
-                vec![(c + 1, lx), (shape[1] - 1, lx - 1)]
-            }
-        }
-        v if v == shape[1] - 1 => {
-            if lx == extend - 1 {
-                vec![(v - 1, lx)]
-            } else {
-                vec![(v - 1, lx), (0, lx + 1)]
-            }
-        }
-        v => vec![(v - 1, lx), (v + 1, lx)],
-    };
-
-    rs.into_iter()
-        .map(move |(r, ly)| (r, c, lx, ly))
-        .chain(cs.into_iter().map(move |(c, lx)| (r, c, lx, ly)))
+    [
+        (Some(x), y.checked_sub(1)),
+        (x.checked_sub(1), Some(y)),
+        (Some(x + 1), Some(y)),
+        (Some(x), Some(y + 1)),
+    ]
+    .into_iter()
+    .filter_map(move |v| match v {
+        (Some(x), Some(y)) if x < max_x && y < max_y => Some((x, y)),
+        _ => None,
+    })
+    .map(move |(x, y)| {
+        let ly = y / rows;
+        let r = y % rows;
+        let lx = x / cols;
+        let c = x % cols;
+        (r, c, lx, ly)
+    })
 }
