@@ -25,30 +25,50 @@ impl Solver for Problem {
     }
 
     fn solve_first(&self, input: &Self::Input) -> Result<Self::Output1, String> {
-        let (x, y) = *input;
-        let candidates_x = i_sqrt(2 * x.0)..=i_sqrt(2 * x.1);
-        // I couldn't figure out the bounds for y_candidates :( - So I hardcoded something that should be enough.
-        // let candidates_y = (y.0 + x.0) / i_sqrt(2 * x.0)..=(y.1 + x.1) / i_sqrt(2 * x.1);
-        let candidates_y = 0..1000;
+        let (_, y) = *input;
 
-        let mut result = 0;
+        // => Y is independent from X
+        // => Because acceleration is constant, it will go up, then down and
+        // step on the same places when t is integer
+        // => The velocity when it reaches the ground Vground === Velocity it went up V0 + 1
+        //
+        // It will skip when Vground < y.0
+        // V0 = -Vground
 
-        for vx in candidates_x {
-            for vy in candidates_y.clone() {
-                if let Some(v) = simulate((vx, vy), (x, y)) {
-                    result = result.max(v);
-                }
-            }
-        }
+        let max_v0 = -y.0 - 1;
 
-        Ok(result)
+        // let max_y_t = max_v0;
+
+        // const getPosition = (speed, time) => (2*speed - (time - 1)) * time / 2
+        let max_y = (2 * max_v0 - (max_v0 - 1)) * max_v0 / 2;
+        Ok(max_y)
     }
 
     fn solve_second(&self, input: &Self::Input) -> Result<Self::Output2, String> {
         let (x, y) = *input;
-        let candidates_x = i_sqrt(2 * x.0)..=x.1;
-        // let candidates_y = (y.0 + x.0) / i_sqrt(2 * x.0)..=(y.1 + x.1) / i_sqrt(2 * x.1);
-        let candidates_y = y.0..1000;
+
+        // Now we know that y can go from straight_into_it up to max_v0 to reach the point.
+        // The X-values are also independent.
+        // We can figure out the minimum speed to reach the spot, and the maximum
+        // will be straight into it.
+
+        /*
+         * By solving the equation:
+         * x = (2*v0+1)/2 * t - (t ** 2) / 2
+         * v = v0 - t
+         * With [V = 0], [X = x.0] for v0
+         */
+        let min_vx = i_sqrt(1 + 8 * x.0) / 2;
+        let max_vy = -y.0 - 1;
+
+        /*
+         * The opposite end is shooting straight into it, which is x.1 for X and y.0 for Y
+         */
+
+        let candidates_x = min_vx..=x.1;
+        let candidates_y = y.0..=max_vy;
+
+        // 18..206, -108..1000 => 2576
 
         let mut result = 0;
 
