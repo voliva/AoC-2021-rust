@@ -10,35 +10,51 @@ use std::str::FromStr;
 pub struct Problem;
 
 impl Solver for Problem {
-    type Input = Vec<(Vec<Node>, usize)>;
+    type Input = (Vec<Node>, Vec<usize>);
     type Output1 = usize;
     type Output2 = usize;
 
     fn read_input(&self, file_reader: BufReader<&File>) -> Self::Input {
-        file_reader
+        let mut all_nodes = Vec::new();
+
+        let root_nodes = file_reader
             .lines()
             .map(|x| x.unwrap())
             .map(|line| {
-                let mut tree = Vec::new();
-                let (r, _) = parse_subnode(&line, &mut tree);
-                (tree, r)
+                let (r, _) = parse_subnode(&line, &mut all_nodes);
+                r
             })
-            .collect()
+            .collect();
+
+        (all_nodes, root_nodes)
     }
 
-    fn solve_first(&self, lines: &Self::Input) -> Result<Self::Output1, String> {
-        // let result = reduce(&root[0], 0);
-        let mut cloned_lines = lines.clone();
+    fn solve_first(&self, (all_nodes, root_nodes): &Self::Input) -> Result<Self::Output1, String> {
+        let mut all_nodes = all_nodes.clone();
 
-        let (tree, id) = &mut cloned_lines[0];
+        let mut root_id = root_nodes[0];
 
-        println!("{}", print(tree, *id));
+        println!("{}", print(&all_nodes, root_id));
 
-        reduce(tree, *id, 0);
+        while reduce(&mut all_nodes, root_id, 0) {
+            println!("r {}", print(&all_nodes, root_id));
+        }
 
-        println!("{}", print(tree, *id));
+        // for i in 1..root_nodes.len() {
+        //     let id = root_nodes[i];
+        //     println!("+ {}", print(&all_nodes, id));
 
-        todo!()
+        //     root_id = sum(&mut all_nodes, root_id, id);
+
+        //     println!("= {}", print(&all_nodes, root_id));
+        //     while reduce(&mut all_nodes, root_id, 0) {
+        //         println!("r {}", print(&all_nodes, root_id));
+        //     }
+        // }
+
+        // println!("=> {}", print(&all_nodes, root_id));
+
+        Ok(magnitude(&all_nodes, root_id))
     }
 
     fn solve_second(&self, input: &Self::Input) -> Result<Self::Output2, String> {
@@ -234,6 +250,13 @@ fn print(tree: &Vec<Node>, id: usize) -> String {
     match &tree[id].node_type {
         NodeType::Regular(v) => format!("{}", v),
         NodeType::Pair(pair) => format!("[{},{}]", print(tree, pair.left), print(tree, pair.right)),
+    }
+}
+
+fn magnitude(tree: &Vec<Node>, id: usize) -> usize {
+    match &tree[id].node_type {
+        NodeType::Regular(v) => *v as usize,
+        NodeType::Pair(pair) => 3 * magnitude(tree, pair.left) + 2 * magnitude(tree, pair.right),
     }
 }
 
