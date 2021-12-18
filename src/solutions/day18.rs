@@ -1,11 +1,6 @@
-use lazy_static::__Deref;
-
 use super::Solver;
-use std::cell::RefCell;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::rc::{Rc, Weak};
-use std::str::FromStr;
 
 pub struct Problem;
 
@@ -34,31 +29,35 @@ impl Solver for Problem {
 
         let mut root_id = root_nodes[0];
 
-        println!("{}", print(&all_nodes, root_id));
+        for i in 1..root_nodes.len() {
+            let id = root_nodes[i];
+            root_id = sum(&mut all_nodes, root_id, id);
 
-        while reduce(&mut all_nodes, root_id, 0) {
-            println!("r {}", print(&all_nodes, root_id));
+            while reduce(&mut all_nodes, root_id) {}
         }
-
-        // for i in 1..root_nodes.len() {
-        //     let id = root_nodes[i];
-        //     println!("+ {}", print(&all_nodes, id));
-
-        //     root_id = sum(&mut all_nodes, root_id, id);
-
-        //     println!("= {}", print(&all_nodes, root_id));
-        //     while reduce(&mut all_nodes, root_id, 0) {
-        //         println!("r {}", print(&all_nodes, root_id));
-        //     }
-        // }
-
-        // println!("=> {}", print(&all_nodes, root_id));
 
         Ok(magnitude(&all_nodes, root_id))
     }
 
-    fn solve_second(&self, input: &Self::Input) -> Result<Self::Output2, String> {
-        todo!()
+    fn solve_second(&self, (all_nodes, root_nodes): &Self::Input) -> Result<Self::Output2, String> {
+        let total_nodes = root_nodes.len();
+
+        let mut result = 0;
+
+        for i in 0..total_nodes {
+            for j in 0..total_nodes {
+                if i == j {
+                    continue;
+                }
+
+                let mut all_nodes = all_nodes.clone();
+                let id = sum(&mut all_nodes, root_nodes[i], root_nodes[j]);
+                while reduce(&mut all_nodes, id) {}
+                result = result.max(magnitude(&all_nodes, id));
+            }
+        }
+
+        Ok(result)
     }
 }
 
@@ -123,7 +122,14 @@ fn sum(tree: &mut Vec<Node>, left: usize, right: usize) -> usize {
     id
 }
 
-fn reduce(tree: &mut Vec<Node>, root: usize, level: usize) -> bool {
+fn reduce(tree: &mut Vec<Node>, root: usize) -> bool {
+    if try_explode(tree, root, 0) {
+        return true;
+    }
+    return try_split(tree, root);
+}
+
+fn try_explode(tree: &mut Vec<Node>, root: usize, level: usize) -> bool {
     let node_type = tree[root].node_type.clone();
 
     match node_type {
@@ -132,10 +138,26 @@ fn reduce(tree: &mut Vec<Node>, root: usize, level: usize) -> bool {
                 explode(tree, root, p.clone());
                 return true;
             }
-            if reduce(tree, p.left, level + 1) {
+            if try_explode(tree, p.left, level + 1) {
                 return true;
             }
-            if reduce(tree, p.right, level + 1) {
+            if try_explode(tree, p.right, level + 1) {
+                return true;
+            }
+            false
+        }
+        _ => false,
+    }
+}
+fn try_split(tree: &mut Vec<Node>, root: usize) -> bool {
+    let node_type = tree[root].node_type.clone();
+
+    match node_type {
+        NodeType::Pair(p) => {
+            if try_split(tree, p.left) {
+                return true;
+            }
+            if try_split(tree, p.right) {
                 return true;
             }
             false
@@ -246,10 +268,12 @@ fn sum_right_down(tree: &mut Vec<Node>, id: usize, value: u8) {
     }
 }
 
-fn print(tree: &Vec<Node>, id: usize) -> String {
+fn _print(tree: &Vec<Node>, id: usize) -> String {
     match &tree[id].node_type {
         NodeType::Regular(v) => format!("{}", v),
-        NodeType::Pair(pair) => format!("[{},{}]", print(tree, pair.left), print(tree, pair.right)),
+        NodeType::Pair(pair) => {
+            format!("[{},{}]", _print(tree, pair.left), _print(tree, pair.right))
+        }
     }
 }
 
@@ -259,125 +283,3 @@ fn magnitude(tree: &Vec<Node>, id: usize) -> usize {
         NodeType::Pair(pair) => 3 * magnitude(tree, pair.left) + 2 * magnitude(tree, pair.right),
     }
 }
-
-// fn sum(left: Rc<RefCell<Node>>, right: Rc<RefCell<Node>>) -> Rc<RefCell<Node>> {
-//     let result = Rc::new(RefCell::new(Node {
-//         parent: None,
-//         side: None,
-//         value: NodeValue::Pair {
-//             left: Rc::clone(&left),
-//             right: Rc::clone(&right),
-//         },
-//     }));
-
-//     left.borrow_mut().parent = Some(Rc::downgrade(&result));
-//     left.borrow_mut().side = Some(Side::Left);
-//     right.borrow_mut().parent = Some(Rc::downgrade(&result));
-//     right.borrow_mut().side = Some(Side::Right);
-
-//     result
-// }
-
-// fn reduce(root: &Rc<RefCell<Node>>, level: usize) -> bool {
-//     let value = &root.borrow().value;
-//     match value {
-//         NodeValue::Pair { left, right } => {
-//             if level == 4 {
-//                 explode(root);
-//                 return true;
-//             }
-//             if reduce(left, level + 1) {
-//                 return true;
-//             }
-//             if reduce(right, level + 1) {
-//                 return true;
-//             }
-//             false
-//         }
-//         NodeValue::Regular(v) if *v >= 10 => {
-//             split(root, *v);
-//             true
-//         }
-//         _ => false,
-//     }
-// }
-
-// fn split(node: &Rc<RefCell<Node>>, value: u8) {
-//     let left_value = value / 2;
-//     let right_value = if value % 2 == 0 {
-//         left_value
-//     } else {
-//         left_value + 1
-//     };
-
-//     let new_node = sum(
-//         create_regular_node(left_value),
-//         create_regular_node(right_value),
-//     );
-
-//     let borrowed = node.borrow();
-//     let parent_ref = borrowed.parent.as_ref().unwrap();
-
-//     if let Some(parent) = parent_ref.upgrade() {
-//         match borrowed.side {
-//             Some(Side::Left) => {
-//                 let parent_value =
-//                 if let NodeValue::Pair { left, right } = &parent.borrow_mut().value {
-
-//                 }
-//             }
-//             Some(Side::Right) => {}
-//             _ => unreachable!(),
-//         }
-//     } else {
-//         panic!("Splitting a node with no parent");
-//     }
-// }
-
-// fn explode(node: &Rc<RefCell<Node>>) {}
-
-// #[derive(Debug)]
-// enum Side {
-//     Left,
-//     Right,
-// }
-
-// #[derive(Debug)]
-// pub struct Node {
-//     parent: Option<Weak<RefCell<Node>>>,
-//     side: Option<Side>,
-//     value: NodeValue,
-// }
-
-// fn parse_subnode(s: &str) -> (Rc<RefCell<Node>>, &str) {
-//     if s.starts_with("[") {
-//         let (left, s_left) = parse_subnode(&s[1..]);
-//         let (right, s_right) = parse_subnode(&s_left[1..]);
-
-//         let result = sum(left, right);
-
-//         (result, &s_right[1..])
-//     } else {
-//         let max = s.find(|c| c < '0' || c > '9').unwrap_or(s.len());
-//         let result = create_regular_node(s[..max].parse().unwrap());
-
-//         (result, &s[max..])
-//     }
-// }
-
-// fn create_regular_node(value: u8) -> Rc<RefCell<Node>> {
-//     Rc::new(RefCell::new(Node {
-//         parent: None,
-//         side: None,
-//         value: NodeValue::Regular(value),
-//     }))
-// }
-
-// #[derive(Debug)]
-// enum NodeValue {
-//     Regular(u8),
-//     Pair {
-//         left: Rc<RefCell<Node>>,
-//         right: Rc<RefCell<Node>>,
-//     },
-// }
