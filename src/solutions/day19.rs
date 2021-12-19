@@ -1,6 +1,5 @@
 use itertools::Itertools;
 use queues::{Buffer, IsQueue};
-use regex::Match;
 
 use super::Solver;
 use std::collections::{HashMap, HashSet};
@@ -16,12 +15,12 @@ pub struct Problem;
 * => Si hi ha 12 nodes en comu, hi ha d'haver un node que tingui la mateixa distancia a 11 dels altres nodes
 */
 
-const OVERLAP: usize = 12;
+const OVERLAP: usize = 6;
 
 impl Solver for Problem {
     type Input = Vec<Vec<Position>>;
     type Output1 = usize;
-    type Output2 = usize;
+    type Output2 = isize;
 
     fn read_input(&self, file_reader: BufReader<&File>) -> Self::Input {
         let lines = file_reader.lines().map(|x| x.unwrap()).skip(1);
@@ -53,9 +52,37 @@ impl Solver for Problem {
         Ok(merged.len())
     }
 
-    fn solve_second(&self, _: &Self::Input) -> Result<Self::Output2, String> {
-        todo!()
+    fn solve_second(&self, scanners: &Self::Input) -> Result<Self::Output2, String> {
+        let matches = match_scanners(&scanners);
+
+        let positions = get_scanner_positions(&scanners, &matches, 0);
+
+        let result = positions
+            .iter()
+            .map(|p1| positions.iter().map(|p2| p1.distance(p2)).max().unwrap())
+            .max()
+            .unwrap();
+
+        Ok(result)
     }
+}
+
+fn get_scanner_positions(
+    scanners: &Vec<Vec<Position>>,
+    matches: &HashMap<usize, Vec<(usize, MatchTransform)>>,
+    i_scanner: usize,
+) -> Vec<Position> {
+    let scanner = &scanners[i_scanner];
+
+    let mut result = vec![Position { x: 0, y: 0, z: 0 }];
+
+    for (i_other, transform) in matches.get(&i_scanner).unwrap() {
+        let other_scanners = get_scanner_positions(scanners, matches, *i_other);
+
+        result.extend(other_scanners.iter().map(|b| transform.apply(b.clone())));
+    }
+
+    result
 }
 
 fn merge_scanners(
@@ -187,7 +214,7 @@ fn get_distances(positions: &Vec<Position>) -> Vec<Vec<isize>> {
         .collect()
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub struct Position {
     x: isize,
     y: isize,
@@ -208,6 +235,9 @@ impl Position {
     fn has_unique_coords(self: &Position) -> bool {
         let abs = self.abs();
         return abs.x != abs.y && abs.x != abs.z && abs.y != abs.z;
+    }
+    fn has_zero(self: &Position) -> bool {
+        return self.x == 0 || self.y == 0 || self.z == 0;
     }
     fn neg(self: &Position) -> Position {
         Position {
@@ -251,6 +281,18 @@ impl Position {
         copy.set_axis(axis, -self.get_axis(axis));
 
         copy
+    }
+}
+
+impl core::fmt::Debug for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("({}, {}, {})", self.x, self.y, self.z))
+
+        // .debug_tuple("Position")
+        //     .field(&self.x)
+        //     .field(&self.y)
+        //     .field(&self.z)
+        //     .finish()
     }
 }
 
@@ -334,20 +376,18 @@ flip_axis ['x','y','z']
 #[derive(Debug)]
 struct MatchTransform {
     origin: Position,
-    swap_axis: Option<(Axis, Axis)>,
+    swap_axis: Vec<(Axis, Axis)>,
     flip_axis: Vec<Axis>,
     relative: Position,
 }
 
 impl MatchTransform {
     fn apply(self: &MatchTransform, target: Position) -> Position {
-        let target = target + self.origin.clone();
-        let target = if let Some(v) = &self.swap_axis {
-            target.swap_axis(v)
-        } else {
-            target
-        };
-        let target = self
+        let mut target = target + self.origin.clone();
+        for swap in &self.swap_axis {
+            target = target.swap_axis(swap);
+        }
+        target = self
             .flip_axis
             .iter()
             .fold(target, |acc, axis| acc.flip_axis(axis));
@@ -357,6 +397,8 @@ impl MatchTransform {
 
 fn get_transform(matching_beacons: &Vec<(&Position, &Position)>) -> MatchTransform {
     let first_pair = &matching_beacons[0];
+
+    // println!("first_pair {:?}", first_pair);
 
     // 1. Move first scanner to origin
     let trans_a = first_pair.0.neg();
@@ -374,26 +416,41 @@ fn get_transform(matching_beacons: &Vec<(&Position, &Position)>) -> MatchTransfo
             );
 
             // 4. Verify pair is valid to find transform: all x-y-z are unique on each position
-            if !first_beacon.has_unique_coords() || !second_beacon.has_unique_coords() {
+            // ASSUMPTION I cut a corner here by not checking the second beacon
+            if first_beacon.has_zero() || !first_beacon.has_unique_coords() {
                 return None;
             }
+            // println!(
+            //     "good pair {:?} {:?} {:?}",
+            //     pair, first_beacon, second_beacon
+            // );
 
             // 5. Match axis changes, and apply on second beacon
             let swap_axis = if first_beacon.x.abs() == second_beacon.x.abs() {
-                if first_beacon.y.abs() == second_beacon.y.abs() {
-                    None
+                if first_beacon.y.abs() != second_beacon.y.abs() {
+                    vec![(Axis::Y, Axis::Z)]
                 } else {
-                    Some((Axis::Y, Axis::Z))
+                    vec![]
                 }
             } else {
-                Some((Axis::X, Axis::Y))
+                if first_beacon.y.abs() == second_beacon.y.abs() {
+                    vec![(Axis::X, Axis::Z)]
+                } else if first_beacon.z.abs() == second_beacon.z.abs() {
+                    vec![(Axis::X, Axis::Y)]
+                } else {
+                    // All of them are different
+                    if first_beacon.x.abs() == second_beacon.y.abs() {
+                        vec![(Axis::X, Axis::Y), (Axis::Y, Axis::Z)]
+                    } else {
+                        vec![(Axis::X, Axis::Z), (Axis::Y, Axis::Z)]
+                    }
+                }
             };
 
-            let swapped_second_beacon = if let Some(v) = &swap_axis {
-                second_beacon.swap_axis(v)
-            } else {
-                second_beacon
-            };
+            let mut swapped_second_beacon = second_beacon.clone();
+            for swap in &swap_axis {
+                swapped_second_beacon = swapped_second_beacon.swap_axis(swap);
+            }
 
             // 6. Match flipped axis
             let mut flip_axis = Vec::new();
@@ -411,7 +468,7 @@ fn get_transform(matching_beacons: &Vec<(&Position, &Position)>) -> MatchTransfo
                 origin: trans_b.clone(), // Move second scanner to origin
                 swap_axis,
                 flip_axis,
-                relative: trans_a.neg(), // Move relative to first scanner
+                relative: first_pair.0.clone(), // Move relative to first scanner
             })
         })
         .unwrap();
