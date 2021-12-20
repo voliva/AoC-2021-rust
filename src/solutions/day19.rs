@@ -72,8 +72,6 @@ fn get_scanner_positions(
     matches: &HashMap<usize, Vec<(usize, MatchTransform)>>,
     i_scanner: usize,
 ) -> Vec<Position> {
-    let scanner = &scanners[i_scanner];
-
     let mut result = vec![Position { x: 0, y: 0, z: 0 }];
 
     for (i_other, transform) in matches.get(&i_scanner).unwrap() {
