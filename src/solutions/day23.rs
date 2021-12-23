@@ -8,7 +8,7 @@ use std::io::{BufRead, BufReader};
 pub struct Problem;
 
 impl Solver for Problem {
-    type Input = [[char; 4]; 4];
+    type Input = [[char; 2]; 4];
     type Output1 = usize;
     type Output2 = usize;
 
@@ -26,21 +26,20 @@ impl Solver for Problem {
             .collect_vec();
 
         [
-            [0, 1, 2, 3].map(|i| lines[i][0]),
-            [0, 1, 2, 3].map(|i| lines[i][1]),
-            [0, 1, 2, 3].map(|i| lines[i][2]),
-            [0, 1, 2, 3].map(|i| lines[i][3]),
+            [0, 1].map(|i| lines[i][0]),
+            [0, 1].map(|i| lines[i][1]),
+            [0, 1].map(|i| lines[i][2]),
+            [0, 1].map(|i| lines[i][3]),
         ]
     }
 
     fn solve_first(&self, input: &Self::Input) -> Result<Self::Output1, String> {
-        println!("{:?}", input);
-
         let start = Node {
-            pods: input.map(|chars| chars.map(char_to_pod)),
-            hallway: [
-                EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-            ],
+            pods: input
+                .into_iter()
+                .map(|chars| chars.iter().map(|c| char_to_pod(*c)).collect())
+                .collect(),
+            hallway: [EMPTY; 11],
         };
 
         let (_, cost) = dijkstra(&start, adjacent, is_solved).unwrap();
@@ -48,8 +47,28 @@ impl Solver for Problem {
         Ok(cost)
     }
 
-    fn solve_second(&self, _: &Self::Input) -> Result<Self::Output2, String> {
-        todo!()
+    fn solve_second(&self, input: &Self::Input) -> Result<Self::Output2, String> {
+        let extra = [['D', 'D'], ['C', 'B'], ['B', 'A'], ['A', 'C']];
+
+        let start = Node {
+            pods: input
+                .into_iter()
+                .enumerate()
+                .map(|(index, chars)| {
+                    vec![
+                        char_to_pod(chars[0]),
+                        char_to_pod(extra[index][0]),
+                        char_to_pod(extra[index][1]),
+                        char_to_pod(chars[1]),
+                    ]
+                })
+                .collect(),
+            hallway: [EMPTY; 11],
+        };
+
+        let (_, cost) = dijkstra(&start, adjacent, is_solved).unwrap();
+
+        Ok(cost)
     }
 }
 
@@ -66,7 +85,7 @@ fn char_to_pod(c: char) -> u8 {
 const EMPTY: u8 = 5;
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct Node {
-    pods: [[u8; 4]; 4],
+    pods: Vec<Vec<u8>>,
     hallway: [u8; 11],
 }
 fn is_solved(node: &Node) -> bool {
@@ -161,7 +180,7 @@ fn move_to_room(node: &Node, index: usize) -> Option<(Node, usize)> {
 fn move_to_hallway(node: &Node, index: usize) -> Vec<(Node, usize)> {
     let start = ENTRIES[index];
 
-    let pod = node.pods[index];
+    let pod = &node.pods[index];
     let first_full = pod
         .iter()
         .enumerate()
