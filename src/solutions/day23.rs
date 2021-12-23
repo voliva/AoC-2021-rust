@@ -2,14 +2,13 @@ use itertools::Itertools;
 use pathfinding::dijkstra;
 
 use super::Solver;
-use std::array;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 pub struct Problem;
 
 impl Solver for Problem {
-    type Input = [(char, char); 4];
+    type Input = [[char; 4]; 4];
     type Output1 = usize;
     type Output2 = usize;
 
@@ -27,10 +26,10 @@ impl Solver for Problem {
             .collect_vec();
 
         [
-            (lines[0][0], lines[1][0]),
-            (lines[0][1], lines[1][1]),
-            (lines[0][2], lines[1][2]),
-            (lines[0][3], lines[1][3]),
+            [0, 1, 2, 3].map(|i| lines[i][0]),
+            [0, 1, 2, 3].map(|i| lines[i][1]),
+            [0, 1, 2, 3].map(|i| lines[i][2]),
+            [0, 1, 2, 3].map(|i| lines[i][3]),
         ]
     }
 
@@ -38,7 +37,7 @@ impl Solver for Problem {
         println!("{:?}", input);
 
         let start = Node {
-            pods: input.map(|(a, b)| (char_to_pod(a), char_to_pod(b))),
+            pods: input.map(|chars| chars.map(char_to_pod)),
             hallway: [
                 EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
             ],
@@ -49,7 +48,7 @@ impl Solver for Problem {
         Ok(cost)
     }
 
-    fn solve_second(&self, input: &Self::Input) -> Result<Self::Output2, String> {
+    fn solve_second(&self, _: &Self::Input) -> Result<Self::Output2, String> {
         todo!()
     }
 }
@@ -67,13 +66,13 @@ fn char_to_pod(c: char) -> u8 {
 const EMPTY: u8 = 5;
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct Node {
-    pods: [(u8, u8); 4],
+    pods: [[u8; 4]; 4],
     hallway: [u8; 11],
 }
 fn is_solved(node: &Node) -> bool {
     node.pods.iter().enumerate().all(|(index, p)| {
         let i = index as u8;
-        p.0 == i && p.1 == i
+        p.iter().all(|p| *p == i)
     })
 }
 
@@ -86,9 +85,9 @@ fn adjacent(node: &Node) -> Vec<(Node, usize)> {
         .pods
         .iter()
         .enumerate()
-        .map(|(index, (a, b))| {
+        .map(|(index, pod)| {
             let i = index as u8;
-            (*a == EMPTY || *a == i) && (*b == EMPTY || *b == i)
+            pod.iter().all(|p| *p == EMPTY || *p == i)
         })
         .collect_vec();
 
@@ -97,7 +96,7 @@ fn adjacent(node: &Node) -> Vec<(Node, usize)> {
         .hallway
         .iter()
         .enumerate()
-        .filter(|(index, a)| **a != EMPTY && pods_ready[**a as usize])
+        .filter(|(_, a)| **a != EMPTY && pods_ready[**a as usize])
         .filter_map(|(index, _)| move_to_room(node, index));
     result.extend(hallway_moves);
 
@@ -105,9 +104,9 @@ fn adjacent(node: &Node) -> Vec<(Node, usize)> {
         .pods
         .iter()
         .enumerate()
-        .filter(|(index, (a, b))| {
+        .filter(|(index, pod)| {
             let i = *index as u8;
-            let has_intruder = (*a != EMPTY && *a != i) || (*b != EMPTY && *b != i);
+            let has_intruder = pod.iter().any(|p| *p != EMPTY && *p != i);
             has_intruder
         })
         .flat_map(|(index, _)| move_to_hallway(node, index));
@@ -138,21 +137,23 @@ fn move_to_room(node: &Node, index: usize) -> Option<(Node, usize)> {
         return None;
     }
 
-    let steps = ((target_hw as isize) - (index as isize)).abs() as usize
-        + (if node.pods[target_pod].1 == EMPTY {
-            2
-        } else {
-            1
-        });
+    let last_empty = node.pods[target_pod]
+        .iter()
+        .enumerate()
+        .rev()
+        .skip_while(|(_, v)| **v != EMPTY)
+        .take(1)
+        .next()
+        .map(|(index, _)| index)
+        .unwrap();
+    let pod_length = last_empty + 1;
+
+    let steps = ((target_hw as isize) - (index as isize)).abs() as usize + pod_length;
     let cost = steps * ENERGY_PER_STEP[target_pod];
 
     let mut result = node.clone();
     result.hallway[index] = EMPTY;
-    if result.pods[target_pod].1 == EMPTY {
-        result.pods[target_pod].1 = target_pod as u8;
-    } else {
-        result.pods[target_pod].0 = target_pod as u8;
-    }
+    result.pods[target_pod][last_empty] = target_pod as u8;
 
     Some((result, cost))
 }
@@ -161,8 +162,15 @@ fn move_to_hallway(node: &Node, index: usize) -> Vec<(Node, usize)> {
     let start = ENTRIES[index];
 
     let pod = node.pods[index];
-
-    let distance_to_hw = if pod.0 != EMPTY { 1 } else { 2 };
+    let first_full = pod
+        .iter()
+        .enumerate()
+        .skip_while(|(_, v)| **v == EMPTY)
+        .take(1)
+        .next()
+        .map(|(index, _)| index)
+        .unwrap();
+    let distance_to_hw = first_full + 1;
 
     let right = (start..node.hallway.len())
         .take_while(|pos| node.hallway[*pos] == EMPTY)
@@ -170,17 +178,10 @@ fn move_to_hallway(node: &Node, index: usize) -> Vec<(Node, usize)> {
         .map(|pos| {
             let steps = distance_to_hw + pos - start;
             let mut result = node.clone();
-            if pod.0 != EMPTY {
-                let cost = steps * ENERGY_PER_STEP[pod.0 as usize];
-                result.hallway[pos] = pod.0;
-                result.pods[index].0 = EMPTY;
-                (result, cost)
-            } else {
-                let cost = steps * ENERGY_PER_STEP[pod.1 as usize];
-                result.hallway[pos] = pod.1;
-                result.pods[index].1 = EMPTY;
-                (result, cost)
-            }
+            let cost = steps * ENERGY_PER_STEP[pod[first_full] as usize];
+            result.hallway[pos] = pod[first_full];
+            result.pods[index][first_full] = EMPTY;
+            (result, cost)
         });
     let left = (0..=start)
         .rev()
@@ -189,17 +190,10 @@ fn move_to_hallway(node: &Node, index: usize) -> Vec<(Node, usize)> {
         .map(|pos| {
             let steps = distance_to_hw + start - pos;
             let mut result = node.clone();
-            if pod.0 != EMPTY {
-                let cost = steps * ENERGY_PER_STEP[pod.0 as usize];
-                result.hallway[pos] = pod.0;
-                result.pods[index].0 = EMPTY;
-                (result, cost)
-            } else {
-                let cost = steps * ENERGY_PER_STEP[pod.1 as usize];
-                result.hallway[pos] = pod.1;
-                result.pods[index].1 = EMPTY;
-                (result, cost)
-            }
+            let cost = steps * ENERGY_PER_STEP[pod[first_full] as usize];
+            result.hallway[pos] = pod[first_full];
+            result.pods[index][first_full] = EMPTY;
+            (result, cost)
         });
 
     right.chain(left).collect()
